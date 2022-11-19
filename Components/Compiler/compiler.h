@@ -27,9 +27,11 @@
 #include <string>
 
 #include "../text_reader.h"
+#include "../token_reader.h"
 #include "Data_Types/let.h"
 #include "Data_Types/fundamental_types/expression.h"
 #include "Data_Types/fundamental_types/error.h"
+#include "Data_Types/fundamental_types/format.h"
 #include "Data_Types/fundamental_types/lambda.h"
 #include "Data_Types/fundamental_types/list.h"
 #include "Data_Types/fundamental_types/logical_term.h"
@@ -102,7 +104,7 @@ namespace Olly {
         compiler::~compiler() {
         }
 
-        let compiler::compile() {
+        inline let compiler::compile() {
             _code = _code.join(expression());
 
             auto word = _tokens.begin();
@@ -130,6 +132,25 @@ namespace Olly {
 
                     place_term(string(str));
                 }
+
+                else if (*word == "`") {
+                    str_type str = collect_string(word, "`");
+
+                    place_term(format(str));
+                }
+
+                //else if (*word == "`") {
+                //    str_type str = collect_string(word, "`");
+
+                //    tokens_type code_tokens;
+
+                //    parser lex(str);
+                //    code_tokens = lex.parse();
+
+                //    compiler c(code_tokens);
+
+                //    // place_term(format(c.compile()));
+                //}
 
                 else if (*word == ")" || *word == ";" || *word == "]" || *word == "}") {
 
@@ -209,7 +230,7 @@ namespace Olly {
                     }
                 }
 
-                else if (*word != "") {
+                else if (*word == "LEAD" || *word == "JOIN" || *word == "DROP") {
 
                     auto it = OPERATORS.find(*word);
 
@@ -219,18 +240,30 @@ namespace Olly {
 
                         place_term(opr);
                     }
+                }
+
+                else if (*word != "") {
+
+                    str_type lower_case = to_lower(*word);
+
+                    auto it = OPERATORS.find(lower_case);
+
+                    if (it != OPERATORS.end()) {
+
+                        let opr = op_call(it->second);
+
+                        place_term(opr);
+                    }
                     else {
 
-                        str_type upper_case = to_upper(*word);
+                        if (lower_case == "true"  || lower_case == "false"     ||
+                            lower_case == "1"     || lower_case == "0"         ||
+                            lower_case == "undef" || lower_case == "undefined") {
 
-                        if (upper_case == "TRUE" || upper_case == "FALSE" ||
-                            upper_case == "1" || upper_case == "0" ||
-                            upper_case == "UNDEF" || upper_case == "UNDEFINED") {
-
-                            place_term(logical_term(upper_case));
+                            place_term(logical_term(lower_case));
                         }
 
-                        else if (upper_case != "NOTHING" && upper_case != "NONE") {
+                        else if (lower_case != "nothing" && lower_case != "node") {
 
                             place_term(symbol(*word));
                         }
@@ -243,7 +276,7 @@ namespace Olly {
             return _code.lead().reverse();
         }
 
-        bool_type compiler::is_prefix_unary_operator(OP_CODE opr) const {
+        inline bool_type compiler::is_prefix_unary_operator(OP_CODE opr) const {
 
             if (opr > OP_CODE::PREFIX_OPERATORS_START && opr < OP_CODE::PREFIX_OPERATORS_STOP) {
                 return true;
@@ -251,7 +284,7 @@ namespace Olly {
             return false;
         }
 
-        bool_type compiler::is_infix_binary_operator(OP_CODE opr) const {
+        inline bool_type compiler::is_infix_binary_operator(OP_CODE opr) const {
 
             if (opr > OP_CODE::INFIX_OPERATORS_START && opr < OP_CODE::INFIX_OPERATORS_STOP) {
                 return true;
@@ -259,7 +292,7 @@ namespace Olly {
             return false;
         }
 
-        let compiler::get_infix_operator(OP_CODE opr) const {
+        inline let compiler::get_infix_operator(OP_CODE opr) const {
 
             let op;
             // TODO Must review if all these operators are in use.  
@@ -371,7 +404,7 @@ namespace Olly {
             return op;
         }
 
-        void compiler::place_term(let t) {
+        inline void compiler::place_term(let t) {
 
             let terms = pop_lead(_code);
 
@@ -380,7 +413,7 @@ namespace Olly {
             _code = _code.join(terms);
         }
 
-        str_type compiler::collect_string(tokens_type::const_iterator& word, const str_type& stop) {
+        inline str_type compiler::collect_string(tokens_type::const_iterator& word, const str_type& stop) {
 
             str_type text = "";
 
@@ -395,6 +428,5 @@ namespace Olly {
 
             return text;
         }
-
 }
 #endif // COMPILER_H

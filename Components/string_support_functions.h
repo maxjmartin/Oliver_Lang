@@ -24,30 +24,32 @@
 //			
 /*********************************************************************/
 
-#include <algorithm>
-#include <sstream>
-#include <string>
-#include <vector>
+//#include <algorithm>
+//#include <sstream>
+//#include <string>
+//#include <vector>
+
+#include "Compiler/Data_Types/base_configuration/system_fundamentals.h"
 
 namespace Olly {
 
-    static const std::string ESCAPE_CHAR(" \t\r\n\a\f\v\b");
+    static const str_type ESCAPE_CHAR(" \t\r\n\a\f\v\b");
 
-    std::string to_lower(std::string str);                                              // Set all text in a std::string to lower case.
-    std::string to_upper(std::string str);                                              // Set all text in a std::string to upper case.
+    str_type to_lower(str_type str);                                  // Set all text in a str_type to lower case.
+    str_type to_upper(str_type str);                                  // Set all text in a str_type to upper case.
 
-    void ltrim(std::string& s);                                                         // Mutable remove left white space.
-    void rtrim(std::string& s);                                                         // Mutable remove right white space.
-    void lrtrim(std::string& s);                                                        // Mutable remove left and right white space.
+    void ltrim(str_type& s);                                          // Mutable remove left white space.
+    void rtrim(str_type& s);                                          // Mutable remove right white space.
+    void lrtrim(str_type& s);                                         // Mutable remove left and right white space.
 
-    std::string left_trim(std::string s);                                               // Copy and remove left white space.
-    std::string right_trim(std::string s);                                              // Copy and remove right white space.
-    std::string trim(std::string s);                                                    // Copy and remove left and right white space.
+    str_type left_trim(str_type s);                                   // Copy and remove left white space.
+    str_type right_trim(str_type s);                                  // Copy and remove right white space.
+    str_type trim(str_type s);                                        // Copy and remove left and right white space.
 
-    static std::vector<std::string> split(std::string str, char delim);                 // Split a string at a single character.
-    static std::vector<std::string> split(const std::string& str, std::string delim);   // Split a string using a series of characters
+    static tokens_type split(str_type str, char delim);               // Split a string at a single character.
+    static tokens_type split(const str_type& str, str_type delim);    // Split a string using a series of characters
 
-    template<typename T> T to(std::string str);                                         // Convert a string to a specific type T.
+    template<typename T> T to(str_type str);                          // Convert a string to a specific type T.
     
     /********************************************************************************************/
     //
@@ -56,21 +58,21 @@ namespace Olly {
     //
     /********************************************************************************************/
 
-    inline std::string to_lower(std::string str) {
+    inline str_type to_lower(str_type str) {
 
         std::transform(str.begin(), str.end(), str.begin(), ::tolower);
 
         return str;
     }
 
-    inline std::string to_upper(std::string str) {
+    inline str_type to_upper(str_type str) {
 
         std::transform(str.begin(), str.end(), str.begin(), ::toupper);
 
         return str;
     }
 
-    inline void ltrim(std::string& s) {
+    inline void ltrim(str_type& s) {
         if (s.empty()) {
             return;
         }
@@ -79,7 +81,7 @@ namespace Olly {
             }));
     }
 
-    inline void rtrim(std::string& s) {
+    inline void rtrim(str_type& s) {
         if (s.empty()) {
             return;
         }
@@ -88,32 +90,32 @@ namespace Olly {
             }).base(), s.end());
     }
 
-    inline void lrtrim(std::string& s) {
+    inline void lrtrim(str_type& s) {
         ltrim(s);
         rtrim(s);
     }
 
-    inline std::string left_trim(std::string s) {
+    inline str_type left_trim(str_type s) {
         ltrim(s);
         return s;
     }
 
-    inline std::string right_trim(std::string s) {
+    inline str_type right_trim(str_type s) {
         rtrim(s);
         return s;
     }
 
-    inline std::string trim(std::string s) {
+    inline str_type trim(str_type s) {
         lrtrim(s);
         return s;
     }
 
-    inline std::vector<std::string> split(std::string str, char delim) {
+    inline tokens_type split(str_type str, char delim) {
 
-        std::stringstream stream;
+        stream_type stream;
         stream.str(str);
 
-        std::vector<std::string> tokens;
+        tokens_type tokens;
 
         while (std::getline(stream, str, delim)) {
 
@@ -123,13 +125,13 @@ namespace Olly {
         return tokens;
     }
 
-    inline std::vector<std::string> split(const std::string& str, std::string delim) {
+    inline tokens_type split(const str_type& str, str_type delim) {
 
         if (delim == "") {
             return split(str, ESCAPE_CHAR);
         }
 
-        std::vector<std::string> tokens, buffer, temp;
+        tokens_type tokens, buffer, temp;
 
         char d;
 
@@ -162,11 +164,11 @@ namespace Olly {
         return tokens;
     }
 
-    template<typename T> inline T to(std::string str) {
+    template<typename T> inline T to(str_type str) {
 
         T n;
 
-        std::stringstream stream;
+        stream_type stream;
 
         try {
             stream << trim(str);

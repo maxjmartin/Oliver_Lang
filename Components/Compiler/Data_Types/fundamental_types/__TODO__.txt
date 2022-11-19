@@ -1,0 +1,5 @@
+
+Types to be created:
+    Time
+    Money
+    File

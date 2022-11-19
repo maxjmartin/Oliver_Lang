@@ -64,6 +64,19 @@ namespace Olly {
                 }   break;
 
 
+                case OP_CODE::is_def_op: {   // Determine if an object is defined?
+
+                    let exp = get_expression_from_deque();
+                    
+                    if (exp.is()) {
+                        set_expression_on_deque(logical_term(true));
+                    }
+                    else {
+                        set_expression_on_deque(logical_term(false));
+                    }
+                }	break;
+
+
 
                 case OP_CODE::deque_op: {   // Print a string representation of the stack.
 
@@ -81,6 +94,7 @@ namespace Olly {
                     val.str(_stream);
 
                     std::cout << _stream.str();
+                    // std::cout << "\nCharacters extracted: " << _stream.tellp() << std::endl;
 
                     _stream.str(str_type());
                     _stream.clear();
@@ -94,6 +108,10 @@ namespace Olly {
 
                 
                     str_type input = "";
+
+                    auto fmt_flags = _stream.flags();
+
+                    std::cin.flags(fmt_flags);
 
                     std::cin >> input;
 
@@ -317,15 +335,20 @@ namespace Olly {
                     let oper;
                     let code = expression();
 
+                    let p;
+                    let q;
+
                     do {  // Loop through the conditions and consequents.
                           // Generate an expression list of each implication.
 
-                        let p = get_expression_from_code();
-                        let q = get_expression_from_code();
+                        p = get_expression_from_code();
+                        q = get_expression_from_code();
 
                         if (oper.op_code() == OP_CODE::else_op) {
 
-                            q = p;
+                            if (p.is()) {
+                                q = p;
+                            }                            
                             p = logical_term(true);
                         }
 
@@ -336,9 +359,10 @@ namespace Olly {
 
                         if (!(oper.op_code() == OP_CODE::elif_op || oper.op_code() == OP_CODE::else_op)) {
                             set_expression_on_code(oper);
+                            break;
                         }
 
-                    } while (oper.op_code() == OP_CODE::elif_op || oper.op_code() == OP_CODE::else_op);
+                    } while ((oper.op_code() == OP_CODE::elif_op || oper.op_code() == OP_CODE::else_op) && p.is());
 
                     // Now loop through the implication list.
                     // Generating the required, postfix implication.  

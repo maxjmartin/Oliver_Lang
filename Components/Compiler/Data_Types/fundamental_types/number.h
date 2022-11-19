@@ -212,6 +212,8 @@ namespace Olly {
 
     void _str_(stream_type& out, const number& self) {
 
+        // TODO: support stream numerical conversion flags.
+
         real_type real = self._value.real();
         real_type imag = self._value.imag();
 
@@ -235,11 +237,11 @@ namespace Olly {
 
         out << "(" << real << ",";
 
-        out.setf(std::ios::showpos);
+        // out.setf(std::ios::showpos);
 
         out << imag << "j)";
 
-        out.unsetf(std::ios::showpos);
+        // out.unsetf(std::ios::showpos);
     }
 
     void _repr_(stream_type& out, const number& self) {

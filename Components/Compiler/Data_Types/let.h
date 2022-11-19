@@ -25,6 +25,7 @@
 /*********************************************************************/
 
 #include "base_configuration/system_fundamentals.h"
+#include "../../string_support_functions.h"
 #include "base_configuration/op_codes.h"
 
 namespace Olly {

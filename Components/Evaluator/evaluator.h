@@ -110,6 +110,7 @@ namespace Olly {
             void    sequence_operators(OP_CODE& opr);
             void associative_operators(OP_CODE& opr);
             void      binary_operators(OP_CODE& opr);
+            void   io_stream_operators(OP_CODE& opr, stream_type& stream);
         };
 
         /********************************************************************************************/
@@ -497,5 +498,4 @@ namespace Olly {
 
 #include "fundamental_operators.h"
 #include    "sequence_operators.h"
-#include "associative_operators.h"
 #include      "binary_operators.h"

@@ -77,21 +77,21 @@ namespace Olly {
 
     logical_term::logical_term(std::string str) : _term(0.0), _weight(1.0) {
 
-        if (str == "TRUE" || str == "1") {
+        if (str == "true" || str == "1") {
 
             _term = 1.0;
             return;
         }
 
-        if (str == "FALSE" || str == "0") {
+        if (str == "false" || str == "0") {
 
             _term = 0.0;
             return;
         }
 
-        if (str == "UNDEF" || str == "UNDEFINED") {
+        if (str == "undef" || str == "undefined") {
 
-            _term = NOT_A_NUMBER;
+            _term   = NOT_A_NUMBER;
             _weight = NOT_A_NUMBER;
             return;
         }

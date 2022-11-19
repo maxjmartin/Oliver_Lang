@@ -62,7 +62,7 @@ namespace Olly {
             
             deque_op, emit_op, endl_op, enter_op,
             assign_op, let_op,
-            size_op, type_op, 
+            is_def_op, size_op, type_op, 
             l_eq_op, L_CON_op, l_imp_op,
             if_op, elif_op, else_op, 
             lambda_op, def_op, end_scope_op,
@@ -77,6 +77,11 @@ namespace Olly {
             l_and_op, l_or_op, l_xor_op, 
         BINARY_OPERATORS,
             
+            bool_alpha_op, bool_numeric_op, 
+        IO_OPERATORS,
+
+
+
 
             
 
@@ -120,7 +125,7 @@ namespace Olly {
         { "idnt",               OP_CODE::idnt_op },    { "deque",             OP_CODE::deque_op },
         { "<<",                 OP_CODE::emit_op },    { ">>",                OP_CODE::enter_op },
         { "assign",           OP_CODE::assign_op },    { "let",                 OP_CODE::let_op },
-        { "if",                   OP_CODE::if_op },    { "elif",               OP_CODE::elif_op },
+        { "if",                   OP_CODE::if_op },    { "is",               OP_CODE::is_def_op },
         { "elif",               OP_CODE::elif_op },    { "else",               OP_CODE::else_op },
         { "lambda",           OP_CODE::lambda_op },    { "def",                 OP_CODE::def_op },
         { "neg",                 OP_CODE::neg_op },    { "endl",               OP_CODE::endl_op },
@@ -146,9 +151,9 @@ namespace Olly {
         { "%%",                  OP_CODE::REM_op },    { "**",                 OP_CODE::POW_op },
 
         // Binary Postfix Relational Operators
-        { "_eq",                  OP_CODE::eq_op },    { "_le",                 OP_CODE::le_op },
-        { "_ne",                  OP_CODE::ne_op },    { "_gt",                 OP_CODE::gt_op },
-        { "_lt",                  OP_CODE::lt_op },    { "_ge",                 OP_CODE::ge_op },
+        { "_=",                   OP_CODE::eq_op },    { "_<=",                 OP_CODE::le_op },
+        { "_-=",                  OP_CODE::ne_op },    { "_>",                  OP_CODE::gt_op },
+        { "_<",                   OP_CODE::lt_op },    { "_>=",                 OP_CODE::ge_op },
 
         // Binary Infix Relational Operators
         { "=",                    OP_CODE::EQ_op },    { "-=",                  OP_CODE::NE_op },
@@ -156,13 +161,19 @@ namespace Olly {
         { "<",                    OP_CODE::LT_op },    { ">",                   OP_CODE::GT_op },
 
         // Binary Infix and Postfix Logical Operators
-        { "&",                 OP_CODE::L_AND_op },    { "_and",             OP_CODE::l_and_op },
-        { "|",                  OP_CODE::L_OR_op },    { "_or",               OP_CODE::l_or_op },
-        { "^",                 OP_CODE::L_XOR_op },    { "_xor",             OP_CODE::l_xor_op },
-        { "?",                 OP_CODE::L_CON_op },    { "_imp",             OP_CODE::l_imp_op },
+        { "&",                 OP_CODE::L_AND_op },    { "_&",               OP_CODE::l_and_op },
+        { "|",                  OP_CODE::L_OR_op },    { "_|",                OP_CODE::l_or_op },
+        { "^",                 OP_CODE::L_XOR_op },    { "_^",               OP_CODE::l_xor_op },
+        { "?",                 OP_CODE::L_CON_op },    { "_?",               OP_CODE::l_imp_op },
+
+        // Binary Infix and Postfix Logical Operators
+        { "bool_alpha",        OP_CODE::bool_alpha_op },    { "bool_numeric",    OP_CODE::bool_numeric_op },
 
 
-                { "size",               OP_CODE::size_op },    { "size",               OP_CODE::size_op },
+
+        // TODO: sort below operations
+
+        { "size",               OP_CODE::size_op },    { "size",               OP_CODE::size_op },
 
         
         // print, str, repr, ...

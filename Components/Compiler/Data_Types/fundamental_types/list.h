@@ -89,7 +89,7 @@ namespace Olly {
     }
 
     bool_type _is_(const list& self) {
-        return self._size;
+        return self._list.is();
     }
 
     real_type _comp_(const list& self, const let& other) {
