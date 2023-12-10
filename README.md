@@ -4,12 +4,12 @@ An (experimental) interpreted programming language. Written in C++, and inspired
 The current implimentation is a rebuild of the initial design, which was fragile and pourly executed.  But that is how you learn.  Create something, then improve it!
 
 The Current ToDo List:
-    * Incorporate Modules in CMake.
-    * Finish integrating fmt argument integration, moving away from streams.
-    * Multithreading.
-    * Update the number class for arbitrary precision math.
-    * Add the remaining data classes back to the interpreter.
-    * Add algorithyms, and views.  
+- Incorporate Modules in CMake.
+- Finish integrating fmt argument integration, moving away from streams.
+- Multithreading.
+- Update the number class for arbitrary precision math.
+- Add the remaining data classes back to the interpreter.
+- Add algorithyms, and views.  
 
 ### Initial Build Configuration
 ```
