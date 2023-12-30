@@ -119,7 +119,7 @@ namespace Oliver {
                 place_term(text(str));
             }
 
-            else if (*word == ")" || *word == "s;" || *word == "]" || *word == "}") {
+            else if (*word == ")" || *word == ";" || *word == "]") {
 
                 var terms = _code.lead();
 
@@ -139,16 +139,11 @@ namespace Oliver {
                         var a = exp.lead();
                         var b = exp.lead();
 
-                        //if (b.op_call() == op_code::start_scope_op) {
-                        //    
-                        //    b = exp.lead().push(b);
-                        //}
-
                         exp = exp.push(function(a, b));
                     }
 
                     else if (is_prefix_unary_operator(term.op_call())) {
-                        // Convert prefix unary operators to postix unary.
+                        // Convert prefix unary operators to postfix unary.
 
                         var a = exp.lead();
                         var b = term;
@@ -176,17 +171,15 @@ namespace Oliver {
                     }
                 }
 
-                //if (exp.lead().op_call() == op_code::map_op) {
-
-                //    var args = exp.drop();
-
-                //    place_term(map(args));
-                //}
-
-                //else {
-                //    place_term(exp);
-                //}
                 place_term(exp);   // TODO: get maps to work.
+            }
+
+            else if (*word == "}") {
+                var terms = _code.lead();
+
+                object obj{ terms };
+
+                place_term(obj);
             }
 
             else if (*word != "") {
@@ -245,14 +238,6 @@ namespace Oliver {
         // TODO Must review if all these operators are in use.  
 
         switch (opr) {
-
-        case op_code::BIND_op:
-            op = op_call(op_code::bind_op);
-            break;
-
-        case op_code::APPLY_op:
-            op = op_call(op_code::apply_op);
-            break;
 
         case op_code::AND_op:
             op = op_call(op_code::l_and_op);
@@ -345,6 +330,10 @@ namespace Oliver {
 
         case op_code::DROP_op:
             op = op_call(op_code::drop_op);
+            break;
+
+        case op_code::GET_op:
+            op = op_call(op_code::get_op);
             break;
         }
 

@@ -27,8 +27,8 @@
 
 namespace Oliver {
 
-    const std::vector<std::string> TextParser::EnclosureChars = {
-        "(", ")", "'", "'", "\"", "\"", "[", "]", "{", "}", "`", "`"
+    const std::vector<std::string> TextParser::SeperateOnChar = {
+        "(", ")", "'", "'", "\"", "\"", "[", "]", "{", "}", "`", "`", "."
     };
 
     TextParser::TextParser(std::string_view input) : _input(input), _code(), _skip(false), _c('\0') {
@@ -64,7 +64,7 @@ namespace Oliver {
 
             if (!_skip) {
 
-                if (whitespace_char(_c) || _c == ',') {
+                if (whitespace_char(_c) || _c == ',') {  // TODO:  Convert to switch black?
 
                     process_word(word);
                 }
@@ -225,7 +225,7 @@ namespace Oliver {
             skip_comment_line();
         }
 
-        else if (_input.peek() == '!') {
+        else if (_input.peek() == '!' && !_skip) {
             /*
                 Comment blocks are handled by setting a
                 boolean value to identify when a comment
@@ -632,6 +632,10 @@ namespace Oliver {
         if (c == '[') {
 
             return "["s;
+        }
+
+        if (_code.back() == "slice") {
+            _code.pop_back();
         }
 
         return "]"s;

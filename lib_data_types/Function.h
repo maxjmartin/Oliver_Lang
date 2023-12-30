@@ -45,8 +45,8 @@ namespace Oliver {
     class function {
 
     public:
-        //using map_type = std::map <std::string, var>;
-        using map_type = boost::container::flat_map <std::string, var>;
+        using map_type = std::map <std::string, var>;
+        //using map_type = boost::container::flat_map <std::string, var>;
 
         function();
         function(var exp);
@@ -225,7 +225,7 @@ namespace Oliver {
             if (name == fmt::format("{}", args.lead())) {
                 return true;
             }
-            args = args.next();
+            args = args.drop();
         }
         return false;
     }

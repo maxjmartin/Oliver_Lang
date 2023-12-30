@@ -165,7 +165,7 @@ namespace Oliver {
             return false;
         }
 
-        return (self._value.real() || self._value.imag() ? true : false);
+        return (self._value.real() != 0 || self._value.imag() != 0);
     }
 
     order _comp_(const number& self, const var& other) {

@@ -47,11 +47,12 @@ namespace Oliver {
         op_call(op_code val);
         op_call(std::string str);
 
-        friend bool            _is_(const op_call& self);
-        friend std::string   _type_(const op_call& self);
-        friend order         _comp_(const op_call& self, const var& other);
-        friend std::string    _str_(const op_call& self, const Format_Args& fmt);
-        friend op_code    _op_call_(const op_call& self);
+        friend bool                  _is_(const op_call& self);
+        friend std::string         _type_(const op_call& self);
+        friend std::size_t    _size_type_(const op_call& self);
+        friend order               _comp_(const op_call& self, const var& other);
+        friend std::string          _str_(const op_call& self, const Format_Args& fmt);
+        friend op_code          _op_call_(const op_call& self);
     };
 
     op_call::op_call(op_code val) : _value(val) {
@@ -73,6 +74,10 @@ namespace Oliver {
 
     std::string _type_(const op_call& self) {
         return "op_call"s;
+    }
+
+    std::size_t _size_type_(const op_call& self){
+        return static_cast<std::size_t>(self._value);
     }
 
     order _comp_(const op_call& self, const var& other) {

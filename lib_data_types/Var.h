@@ -30,6 +30,7 @@
 #include <utility>
 
 #include "text_support.h"
+#include "Error.h"
 #include "OpCodes.h"
 
 namespace Oliver {
@@ -111,22 +112,14 @@ namespace Oliver {
 
         var               lead()                                   ;  // Lead element of an object.
         var               push(var n)                              ;  // Place an object as the lead element.
-        var               next()                                   ;  // Remove the lead element from an object.
+        var               drop()                                   ;  // Remove the lead element from an object.
+        var              shift()                                   ;  // Get and drop the lead element of a sequence.  
         var            reverse()                                   ;  // Reverse the order of an object's elements.
 
-        //  TODO = Add a slice operator!
-
-        //var&         operator[](var& n)                 ;
-        //var&         operator[](var& n)            const;
-        //// TODO: once at C++ 23
-        //// var         operator[](var index, var value)  const;
-
-        //var         operator>>(std::size_t shift)     const;
-        //var         operator<<(std::size_t shift)     const;
-
-        //var                get(var key)               const;  // Get an element from a collection.
-        //var                set(var key, var val)      const;  // Set the value of an element in a collection.
-        //var                del(var key)               const;  // Delete an element from a collection.
+        var         get(var index)                                 ;  // Get the value of an index.
+        var         set(var index, var value)                      ;  // Set the value of an index.
+        var         del(var index)                                 ;  // Delete the value of an index.
+        var         has(var index)                                 ;  // Determine if index is a member of the object.
 
         //std::string              help()                      const;  // Define a string description of the object.
 
@@ -179,8 +172,14 @@ namespace Oliver {
 
             virtual var             _lead()                               = 0;
             virtual var             _push(var& n)                         = 0;
-            virtual var             _next()                               = 0;
+            virtual var             _drop()                               = 0;
+            virtual var             _shift()                              = 0;
             virtual var             _reverse()                            = 0;
+
+            virtual var             _get(var& n)                          = 0;
+            virtual var             _set(var& i, var& n)                  = 0;
+            virtual var             _del(var& n)                          = 0;
+            virtual var             _has(var& n)                          = 0;
 
             virtual op_code         _op_call()                      const = 0;
         };
@@ -231,8 +230,14 @@ namespace Oliver {
 
             var             _lead()                              ;
             var             _push(var& n)                        ;
-            var             _next()                              ;
+            var             _drop()                              ;
+            var             _shift()                             ;
             var             _reverse()                           ;
+
+            var             _get(var& n)                         ;
+            var             _set(var& i, var& n)                 ;
+            var             _del(var& n)                         ;
+            var             _has(var& n)                         ;
 
             op_code         _op_call()                      const;
 
@@ -297,7 +302,7 @@ namespace Oliver {
 
     template<typename T>
     inline std::string _type_(const T& self) {
-        return fmt::format(fmt::runtime("Invalid type = \{ {} \}"), typeid(self).name());
+        return fmt::format(fmt::runtime("Invalid type = \\{ {} \\}"), typeid(self).name());
     }
 
 
@@ -495,7 +500,8 @@ namespace Oliver {
 
     template<typename T>
     inline var _lead_(T& self) {
-        return var();
+        auto fa = Format_Args{};
+        return var(error("Invalid operation on type: " + _type_(self) + "value: " + _str_(self, fa)));
     }
 
 
@@ -509,10 +515,19 @@ namespace Oliver {
 
 
     template<typename T>            /****  Drop The Leading Element  ****/
-    var _next_(T& self);
+    var _drop_(T& self);
 
     template<typename T>
-    inline var _next_(T& self) {
+    inline var _drop_(T& self) {
+        return var();
+    }
+
+
+    template<typename T>            /****  Get And Drop The Leading Element  ****/
+    var _shift_(T& self);
+
+    template<typename T>
+    inline var _shift_(T& self) {
         return var();
     }
 
@@ -522,6 +537,42 @@ namespace Oliver {
 
     template<typename T>
     inline var _reverse_(T& self) {
+        return var();
+    }
+
+
+    template<typename T>            /****  Get Object Index  ****/
+    var _get_(T& self, var& n);
+
+    template<typename T>
+    inline var _get_(T& self, var&n) {
+        return var();
+    }
+
+
+    template<typename T>            /****  Set Object Index  ****/
+    var _set_(T& self, var& i, var& n);
+
+    template<typename T>
+    inline var _set_(T& self, var& i, var& n) {
+        return var();
+    }
+
+
+    template<typename T>            /****  Delete Object Index  ****/
+    var _del_(T& self, var& n);
+
+    template<typename T>
+    inline var _del_(T& self, var& n) {
+        return var();
+    }
+
+
+    template<typename T>            /****  Does Object Have Index  ****/
+    var _has_(T& self, var& n);
+
+    template<typename T>
+    inline var _has_(T& self, var& n) {
         return var();
     }
 
@@ -720,12 +771,32 @@ namespace Oliver {
         return _self->_push(n);
     }
 
-    inline var var::next() {
-        return _self->_next();
+    inline var var::shift() {
+        return _self->_shift();
+    }
+
+    inline var var::drop() {
+        return _self->_drop();
     }
 
     inline var var::reverse() {
         return _self->_reverse();
+    }
+
+    inline var var::get(var n) {
+        return _self->_get(n);
+    }
+
+    inline var var::set(var i, var n) {
+        return _self->_set(i, n);
+    }
+
+    inline var var::del(var n) {
+        return _self->_del(n);
+    }
+
+    inline var var::has(var n) {
+        return _self->_has(n);
     }
 
     /********************************************************************************************/
@@ -868,13 +939,38 @@ namespace Oliver {
     }
 
     template <typename T>
-    inline var var::data_type<T>::_next() {
-        return _next_(_data);
+    inline var var::data_type<T>::_shift() {
+        return _shift_(_data);
+    }
+
+    template <typename T>
+    inline var var::data_type<T>::_drop() {
+        return _drop_(_data);
     }
 
     template <typename T>
     inline var var::data_type<T>::_reverse() {
         return _reverse_(_data);
+    }
+
+    template <typename T>
+    inline var var::data_type<T>::_get(var& n) {
+        return _get_(_data, n);
+    }
+
+    template <typename T>
+    inline var var::data_type<T>::_set(var& i, var& n) {
+        return _set_(_data, i, n);
+    }
+
+    template <typename T>
+    inline var var::data_type<T>::_del(var& n) {
+        return _del_(_data, n);
+    }
+
+    template <typename T>
+    inline var var::data_type<T>::_has(var& n) {
+        return _has_(_data, n);
     }
 
     template<typename T>

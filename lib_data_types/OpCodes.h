@@ -57,6 +57,7 @@ namespace Oliver {
         EQ_op, NE_op, LT_op, LE_op, GT_op, GE_op,
         L_AND_op, L_OR_op, L_XOR_op,
         LEAD_op, JOIN_op, DROP_op,
+        GET_op, SET_op, HAS_op, DEL_op,
 
         BIND_op, APPLY_op,
 
@@ -64,19 +65,23 @@ namespace Oliver {
 
         /**************************** Runtime Operators *****************************/
 
-        shebang_op, no_except_op,
-        deque_op, emit_op, endl_op, enter_op,      
+        shebang_op, no_except_op, rec_limit_op, stack_limit_op,
+
+        deque_op, emit_op, endl_op, input_op,      
         assign_op, let_op,
-        is_def_op, size_op, type_op,
-        l_eq_op, L_IMP_op, l_imp_op,
+        bool_op, size_op, type_op,
+        L_IMP_op, l_imp_op,
         if_op, elif_op, else_op,
         func_op, def_op, end_scope_op,
         FUNDAMENTAL_OPERATORS,
 
-        lead_op, join_op, drop_op,
+        lead_op, join_op, drop_op, next_op,
         deque_lead_op, deque_join_op, deque_drop_op,
         deque_last_op, deque_push_op, deque_shift_op,
         SEQUENTIAL_OPERATORS,
+
+        has_op, get_op, set_op, del_op,
+        INDEX_OPERATORS,
 
         add_op, sub_op, mul_op, div_op, mod_op, fdiv_op, rem_op, exp_op,
         eq_op, ne_op, lt_op, le_op, gt_op, ge_op,
@@ -88,12 +93,14 @@ namespace Oliver {
 
 
 
-        apply_op, has_op, get_op, set_op, del_op, bind_op, 
-        FUNCTIONAL_OPERATORS,
+        
 
         map_op, clear_op,
 
         result_op,
+
+        rev_op,
+        ALGORITHM_OPERATORS,
 
         END_OPERATORS
     };
@@ -107,21 +114,26 @@ namespace Oliver {
     //static const std::map<std::string, op_code> operators = {
     static const boost::container::flat_map<std::string, op_code> operators = {
 
-        // Fundamental Operators
+        // Shebang Operators
         { "#!",              op_code::shebang_op },    { "NO_EXCEPT",     op_code::no_except_op },
+        { "Recur_Limit",   op_code::rec_limit_op },    { "STACK_LIMIT", op_code::stack_limit_op },
+
+        // Fundamental Operators
         { "none",            op_code::nothing_op },    { "nothing",         op_code::nothing_op },
         { "idnt",               op_code::idnt_op },    { "deque",             op_code::deque_op },
-        { "<<",                 op_code::emit_op },    { ">>",                op_code::enter_op },
+        { "<<",                 op_code::emit_op },    { ">>",                op_code::input_op },
         { "assign",           op_code::assign_op },    { "let",                 op_code::let_op },
-        { "if",                   op_code::if_op },    { "is",               op_code::is_def_op },
+        { "if",                   op_code::if_op },    { "??",                 op_code::bool_op },
         { "elif",               op_code::elif_op },    { "else",               op_code::else_op },
         { "func",               op_code::func_op },    { "def",                 op_code::def_op },
         { "neg",                 op_code::neg_op },    { "endl",               op_code::endl_op },
+        { "type",               op_code::type_op },    { "size",               op_code::size_op },
 
-        // Fundamental Sequential Operators
+        // Sequential Operators
         { "lead",               op_code::lead_op },    { "<--",                op_code::LEAD_op },
         { "join",               op_code::join_op },    { "<->",                op_code::JOIN_op },
         { "drop",               op_code::drop_op },    { "-->",                op_code::DROP_op },
+        { "next",               op_code::next_op },
         { "lead_",        op_code::deque_lead_op },    { "_last",        op_code::deque_last_op },
         { "join_",        op_code::deque_join_op },    { "_join",        op_code::deque_push_op },
         { "drop_",        op_code::deque_drop_op },    { "_drop",       op_code::deque_shift_op },
@@ -154,6 +166,11 @@ namespace Oliver {
         { "^",                 op_code::L_XOR_op },    { "xor",              op_code::l_xor_op },
         { "then",              op_code::L_IMP_op },    { "imply",            op_code::l_imp_op },
 
+        // Mapping Operators
+        { "get",                 op_code::get_op },    { "has",                 op_code::has_op },
+        { "set",                 op_code::set_op },    { "del",                 op_code::del_op },
+        { ".",                   op_code::GET_op },
+
         // Binary Infix and Postfix Logical Operators
         { "bool_alpha",        op_code::bool_alpha_op },    { "bool_numeric",    op_code::bool_numeric_op },
 
@@ -169,8 +186,9 @@ namespace Oliver {
         //  Operators to sort.
 
 
-        { "get",                 op_code::get_op },    { "has",                 op_code::has_op },
-        { "set",                 op_code::set_op },    { "del",                 op_code::del_op },
+
+
+        { "rev",                 op_code::rev_op },
 
         /****************************************************************************/
 

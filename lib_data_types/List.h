@@ -40,7 +40,7 @@ namespace Oliver {
 
     class list {
 
-        std::vector<var> _expr;
+        std::vector<var> _list;
 
     public:
 
@@ -56,7 +56,8 @@ namespace Oliver {
 
         friend var                  _lead_(list& self);
         friend var                  _push_(list& self, var& other);
-        friend var                  _next_(list& self);
+        friend var                  _drop_(list& self);
+        friend var                 _shift_(list& self);
         friend var               _reverse_(list& self);
 
         friend var                   _add_(list& self, var& other);
@@ -68,11 +69,11 @@ namespace Oliver {
     //
     /********************************************************************************************/
 
-    list::list() : _expr() {
+    list::list() : _list() {
     }
 
-    list::list(var x) : _expr() {
-        _expr.push_back(x);
+    list::list(var x) : _list() {
+        _list.push_back(x);
     }
 
     std::string _type_(const list& self) {
@@ -80,11 +81,11 @@ namespace Oliver {
     }
 
     std::size_t _size_type_(const list& self) {
-        return self._expr.size();
+        return self._list.size();
     }
 
     bool _is_(const list& self) {
-        return self._expr.size();
+        return self._list.size();
     }
 
     auto _comp_(const list& self, const var& other) {
@@ -93,7 +94,7 @@ namespace Oliver {
 
         if (ptr) {
 
-            if (self._expr == ptr->_expr) {
+            if (self._list == ptr->_list) {
                 return order::equivalent;
             }
         }
@@ -107,9 +108,9 @@ namespace Oliver {
             return "[]"s;
         }
 
-        std::string result = fmt::format("{}", self._expr.back().str(fmt));
+        std::string result = fmt::format("{}", self._list.back().str(fmt));
 
-        for (auto i = self._expr.crbegin() + 1; i != self._expr.crend(); ++i) {
+        for (auto i = self._list.crbegin() + 1; i != self._list.crend(); ++i) {
             result = fmt::format("{}, {}", result, i->str(fmt));
         }
 
@@ -118,10 +119,10 @@ namespace Oliver {
 
     var _lead_(list& self) {
 
-        if (self._expr.empty()) {
+        if (self._list.empty()) {
             return var();
         }
-        return self._expr.back();
+        return self._list.back();
     }
 
     var _push_(list& self, var& other) {
@@ -130,15 +131,26 @@ namespace Oliver {
             return value_of(self);
         }
 
-        self._expr.push_back(other);
+        self._list.push_back(other);
 
         return value_of(self);
     }
 
-    var _next_(list& self) {
+    var _drop_(list& self) {
 
-        if (!self._expr.empty()) {
-            self._expr.pop_back();
+        if (!self._list.empty()) {
+            self._list.pop_back();
+        }
+
+        return value_of(self);
+    }
+
+    var _shift_(list& self) {
+
+        if (!self._list.empty()) {
+            var a = std::move(self._list.back());
+            self._list.pop_back();
+            return make_pair(a, self);
         }
 
         return value_of(self);
@@ -146,11 +158,11 @@ namespace Oliver {
 
     var _reverse_(list& self) {
 
-        if (self._expr.empty()) {
+        if (self._list.empty()) {
             return value_of(self);
         }
 
-        std::reverse(self._expr.begin(), self._expr.end());
+        std::reverse(self._list.begin(), self._list.end());
 
         return value_of(self);
     }
@@ -160,13 +172,13 @@ namespace Oliver {
         if (other.type() == "list") {
             auto ptr = other.move<list>();
 
-            ptr->_expr.insert(
-                ptr->_expr.end(),
-                std::make_move_iterator(self._expr.begin()),
-                std::make_move_iterator(self._expr.end())
+            ptr->_list.insert(
+                ptr->_list.end(),
+                std::make_move_iterator(self._list.begin()),
+                std::make_move_iterator(self._list.end())
             );
 
-            self._expr = std::move(ptr->_expr);
+            self._list = std::move(ptr->_list);
 
             return value_of(self);
         }

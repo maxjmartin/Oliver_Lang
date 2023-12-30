@@ -30,6 +30,7 @@
 #include <string>
 #include <vector>
 
+#include "compiler.h"
 #include "text_support.h"
 #include "data_types.h"
 
@@ -56,10 +57,11 @@ namespace Oliver {
         deque_type      _code;
 
         // Shebang Variables
-        bool NO_EXCEPTIONS = true;
+        bool   NO_EXCEPTIONS   = true;
+        size_t RECURSION_LIMIT = 512ull;
+        size_t STACK_LIMIT     = 512ull;
 
     public:
-        static const std::size_t stack_limit;
 
         evaluator();
         evaluator(const evaluator& env) = delete;
@@ -72,7 +74,6 @@ namespace Oliver {
 
         void throw_error_message(const std::string& ermsg);
 
-        void define_enclosure(var& lam);
         void define_enclosure();
         void delete_enclosure();
 
@@ -92,19 +93,19 @@ namespace Oliver {
 
         void fundamental_operators(const op_code& opr);
         void    sequence_operators(const op_code& opr);
+        void       index_operators(const op_code& opr);
         void      binary_operators(const op_code& opr);
+        void   algorithm_operators(const op_code& opr);
 
         bool expression_is_empty(const var& expr) const;
     };
-
-    const std::size_t evaluator::stack_limit = 2048;
 }
 
-
-/************************************************************************************************************************/
-
-
-
+/********************************************************************************************/
+//
+//                                   Evaluator Implementation
+//
+/********************************************************************************************/
 namespace Oliver {
 
     evaluator::evaluator() : _variables(), _deque(), _code() {
@@ -135,12 +136,6 @@ namespace Oliver {
         }
     }
 
-    inline void evaluator::define_enclosure(var& lam) {
-        // Define a net new enclosure from a labda expression.
-        const function* l = lam.cast<function>();
-        _variables.push_back(l->variables());
-    }
-
     inline void evaluator::define_enclosure() {
         // Define the global enclosure.
         _variables.push_back(map_type());
@@ -163,12 +158,12 @@ namespace Oliver {
 
     inline void evaluator::set_expression_on_deque(var exp) {
 
-        if (_deque.size() < evaluator::stack_limit) {
+        if (_deque.size() < evaluator::STACK_LIMIT) {
 
             if (exp.is_something()) {
                 _deque.push_back(std::move(exp));
+                return;
             }
-            return;
         }
 
         throw_error_message("Deque overflow!");
@@ -228,9 +223,9 @@ namespace Oliver {
 
     inline void evaluator::set_symbol(var& name, var& value) {
 
-        while (value.type() == "symbol") {
-            value = get_symbol(value);
-        }
+        //while (value.type() == "symbol") {
+        //    value = get_symbol(value);
+        //}
 
         std::string symbol_name = fmt::format("{}", name);
 
@@ -238,7 +233,7 @@ namespace Oliver {
             _variables.push_back(map_type());
         }
 
-        _variables.back()[symbol_name] = value;
+        _variables.back()[symbol_name] = std::move(value);
     }
 
     inline var evaluator::get_expression_from_deque() {
@@ -269,12 +264,17 @@ namespace Oliver {
         return a;
     }
 
-    /********************************************************************************************/
-    //
-    //                                   Evaluation Loop
-    //
-    /********************************************************************************************/
+    inline bool evaluator::expression_is_empty(const var& expr) const {
+        return !expr;
+    }
+}
 
+/********************************************************************************************/
+//
+//                                   Evaluation Loop
+//
+/********************************************************************************************/
+namespace Oliver {
     inline void evaluator::eval() {
 
         do {
@@ -301,7 +301,7 @@ namespace Oliver {
 
             else if (exp.type() == "function") {
 
-                const function* func = exp.cast<function>();
+                auto func = exp.move<function>();
 
                 map_type enc = func->variables();
 
@@ -330,7 +330,6 @@ namespace Oliver {
                 }
 
                 _variables.push_back(enc);
-
                 set_expression_on_code(op_call(op_code::end_scope_op));
                 set_expression_on_code(std::move(body));
             }
@@ -353,8 +352,16 @@ namespace Oliver {
                         sequence_operators(opr);
                     }
 
+                    else if (opr < op_code::INDEX_OPERATORS) {
+                        index_operators(opr);
+                    }
+
                     else if (opr < op_code::BINARY_OPERATORS) {
                         binary_operators(opr);
+                    }
+
+                    else if (opr < op_code::ALGORITHM_OPERATORS) {
+                        algorithm_operators(opr);
                     }
                 }
             }
@@ -368,158 +375,162 @@ namespace Oliver {
 
 /********************************************************************************************/
 //
-//                                 Fundamental Operators
+//                                   Fundamental Operators
 //
 /********************************************************************************************/
-
 namespace Oliver {
 
     inline void evaluator::fundamental_operators(const op_code& opr) {
 
         switch (opr) {
 
-        case op_code::idnt_op: {   // Place on to the stack an expression without evaluation.
+            case op_code::idnt_op: {   // Place on to the stack an expression without evaluation.
 
-            var exp = get_expression_from_code();
-            set_expression_on_deque(exp);
-        }	break;
+                var exp = get_expression_from_code();
+                set_expression_on_deque(exp);
+            }   break;
 
+            case op_code::neg_op: {    // Get the negation of an object.
 
-        case op_code::neg_op: {    // Get the negation of an object.
+                var a = get_expression_from_code();
 
-            var a = get_expression_from_code();
-
-            while (a.type() == "symbol") {
-                a = get_symbol(a);
-            }
-
-            if (a.type() == "function" && _variables.size()) {
-                /*
-                    For function types we bind the current scope.
-                    That way it is specialized, negating the 
-                    variable abstractions.  
-                    Then it will be left on the deque.
-                */
-
-                auto l = a.move<function>();
-
-                l->bind_scope(_variables.back());
-
-                a = *l;
-            }
-
-            set_expression_on_deque(-a);
-
-        }   break;
-
-
-
-        case op_code::deque_op: {  // Place copy of deque on back of deque.
-            var deque = get_result_deque();
-            set_expression_on_deque(deque);
-        }	break;
-
-
-
-        case op_code::emit_op: {
-
-            var val = get_expression_from_deque();
-
-            if (val.type() == "error") {
-                if (!evaluator::NO_EXCEPTIONS) {
-
-                    fmt::print(fmt::emphasis::bold | fg(fmt::color::red), "{}!\nContinue runtime? ", val);
-
-                    std::string continue_runtime;
-                    std::getline(std::cin, continue_runtime);
-                    continue_runtime = to_lower(continue_runtime);
-                    continue_runtime = trim(continue_runtime);
-
-                    if (continue_runtime != "y" && continue_runtime != "yes") {
-                        _code.clear();
-                    }
+                while (a.type() == "symbol") {
+                    a = get_symbol(a);
                 }
-            }
-            else {
-                fmt::print("{}", val);
-            }
 
-        }   break;
+                if (a.type() == "function" && _variables.size()) {
+                    /*
+                        For function types we bind the current scope.
+                        That way it is specialized, negating the 
+                        variable abstractions.  
+                        Then it will be left on the deque.
+                    */
 
+                    auto l = a.move<function>();
 
+                    l->bind_scope(_variables.back());
 
-        case op_code::endl_op: {
-            fmt::println("");
-        }   break;
+                    a = *l;
+                }
 
+                set_expression_on_deque(-a);
 
+            }   break;
 
-        case op_code::assign_op: {
+            case op_code::deque_op: {  // Place copy of deque on back of deque.
+                var deque = get_result_deque();
+                set_expression_on_deque(deque);
+            }   break;
 
-            var val = get_expression_from_deque();
-            var var = get_expression_from_deque();
+            case op_code::emit_op: {
 
-            while (val.type() == "symbol") {  // Get the value of an abstraction.
-                val = get_symbol(val);
-            }
+                var val = get_expression_from_deque();
 
-            if (var.type() == "symbol") {  // First assign the value to a variable.
-                set_symbol(var, val);
-            }
+                if (val.type() == "error") {
+                    if (!evaluator::NO_EXCEPTIONS) {
 
-            else if (var.op_call() == op_code::deque_op) {  // set the elements of a list to the deque.
+                        fmt::print(fmt::emphasis::bold | fg(fmt::color::red), "{}!\nContinue runtime? ", val);
 
-                _deque.clear();
+                        std::string continue_runtime;
+                        std::getline(std::cin, continue_runtime);
+                        continue_runtime = to_lower(continue_runtime);
+                        continue_runtime = trim(continue_runtime);
 
-                if (val.type() == "list") {
-
-                    while (val) {
-
-                        _deque.push_back(val.lead());
+                        if (continue_runtime != "y" && continue_runtime != "yes") {
+                            _code.clear();
+                        }
                     }
                 }
                 else {
-                    _deque.push_back(val);
-                }
-            }
-            else {
-                throw_error_message("Miss handled assignment: " + fmt::format("{}", val) + " = " + fmt::format("{}", var));
-            }
-
-        }   break;
-
-
-        case op_code::let_op: {  // Assign or apply a value to a variable.
-
-            var vars = get_expression_from_code();
-            var vals = get_expression_from_code();
-            var oper = get_expression_from_code();
-
-            if (oper.op_call() == op_code::eq_op) {
-                /*
-                    Simple assignment of one or more variables.
-                    Functions are not evaluated before assignment.
-                    Instead they are applied as a 'def' operator
-                    has been called.
-                */
-
-                if (vars.type() != "expression") {
-
-                    vars = expression(vars);
-                    vals = expression(vals);
+                    fmt::print("{}", val);
                 }
 
-                while (vars) {
+            }   break;
 
-                    var name  = vars.lead();
-                    var value = vals.lead();
+            case op_code::input_op: {
+
+                var val = get_expression_from_code();
+
+                if (val.type() == "symbol") {
+                    std::string user_input;
+                    std::getline(std::cin, user_input);
+
+                    set_expression_on_code(compiler{ TextParser{ user_input }.parse() }.compile());
+                }
+                else {
+                    throw_error_message("Invalid symbol assignment from user unput!");
+                }
+
+            }   break;
+
+            case op_code::endl_op: {
+                fmt::println("");
+            }   break;
+
+            case op_code::assign_op: {
+
+                var val = get_expression_from_deque();
+                var var = get_expression_from_deque();
+
+                if (var.type() == "symbol") {  // First assign the value to a variable.
+                    set_symbol(var, val);
+                }
+
+                else if (var.op_call() == op_code::deque_op) {  // set the elements of a list to the deque.
+
+                    _deque.clear();
+
+                    if (val.type() == "expression") {
+
+                        while (val) {
+                            _deque.push_back(val.lead());
+                        }
+                    }
+                    else {
+                        _deque.push_back(val);
+                    }
+                }
+
+                else {
+                    throw_error_message("Miss handled assignment: " + fmt::format("{}", val) + " = " + fmt::format("{}", var));
+                }
+
+            }   break;
+
+            case op_code::let_op: {  // Assign or apply a value to a variable.
+
+                var name  = get_expression_from_code();
+                var value = get_expression_from_code();
+                var oper  = get_expression_from_code();
+
+                if (oper.op_call() != op_code::eq_op) {
+                    var index = value;
+                    
+                    value = oper;
+                    oper = get_expression_from_code();
+
+                    var exp = expression(op_call(op_code::set_op));
+                    exp = exp.push(value);
+                    exp = exp.push(index);
+                    exp = exp.push(name);
+
+                    value = exp;
+                }
+
+                if (oper.op_call() == op_code::eq_op) {
+                    /*
+                        Simple assignment of one or more variables.
+                        Functions are not evaluated before assignment.
+                        Instead they are applied as a 'def' operator
+                        has been called.
+                    */
 
                     if (value.op_call() == op_code::idnt_op) {
-                        value = vals ? expression(vals.lead()) : expression(get_expression_from_code());
+                        value = expression(get_expression_from_code());
                         value = value.push(op_call(op_code::idnt_op));
                     }
                     else if (value.op_call() == op_code::neg_op) {
-                        value = vals ? expression(vals.lead()) : expression(get_expression_from_code());
+                        value = expression(get_expression_from_code());
                         value = value.push(op_call(op_code::neg_op));
                     }
 
@@ -542,236 +553,221 @@ namespace Oliver {
                         set_expression_on_code(exp);
                     }
                 }
-            }
-        }	break;
+            }   break;
 
+            case op_code::size_op: {   // Get the size of an object.
 
+                var val = get_expression_from_deque();
 
-        case op_code::size_op: {   // Get the size of an object.
+                val = number(val.size_type());
 
-            var val = get_expression_from_deque();
+                set_expression_on_deque(val);
 
-            val = number(val.size_type());
+            }   break;
 
-            set_expression_on_deque(val);
+            case op_code::type_op: {   // Get the type description of an object.
 
-        }	break;
+                var val = get_expression_from_deque();
 
+                val = text(val.type());
 
+                set_expression_on_deque(val);
 
-        case op_code::type_op: {   // Get the type description of an object.
+            }   break;
 
-            var val = get_expression_from_deque();
+            case op_code::bool_op: {   // Determine if an object is defined.
 
-            val = text(val.type());
+                var val = get_expression_from_deque();
 
-            set_expression_on_deque(val);
+                val = boolean(val.op_call() == op_code::deque_op ? !_deque.empty() : bool(val));
 
-        }	break;
+                set_expression_on_deque(val);
 
+            }   break;
 
+            case op_code::L_IMP_op: {
+                /*
+                    This is the basic infix p -> q else -q.
 
-        case op_code::l_eq_op: {   // Determine if an object is defined.
+                    It simply rearranges the expression to be
+                    a postfix implementation.
 
-            var val = get_expression_from_deque();
+                    example:
+                        var x = '42'
 
-            val = boolean(val.op_call() == op_code::deque_op ? !_deque.empty() : !!val);
+                        (x > '10') then :
+                            ("x is greater than 10" << endl)
+                            ("x is not greater than 10" << endl)
+                        ;
+                */
 
-            set_expression_on_deque(val);
-
-        }	break;
-
-
-
-        case op_code::L_IMP_op: {
-            /*
-                This is the basic infix p -> q else -q.
-
-                It simply rearanges the expression to be
-                a postfix implimentation.
-
-                example:
-                    var x = '42'
-
-                    (x > '10') then :
-                        ("x is greater than 10" << endl)
-                        ("x is not greater than 10" << endl)
-                    ;
-            */
-
-            var p = get_expression_from_deque();
-            var q = get_expression_from_code();
-
-            if (p) {
-                p = q.lead();
-            }
-            else {
-                p = q.next().lead();
-            }
-
-            set_expression_on_code(p);
-        }   break;
-
-
-
-        case op_code::l_imp_op: {
-            /*
-                This is the basic postfix p -> q else -q.
-
-                example:
-                    var x = '42'
-
-                    (x > '10')+:
-                        ("x is greater than 10" << endl)
-                        ("x is not greater than 10" << endl)
-                    ; imply
-            */
-
-            var q = get_expression_from_deque();
-            var p = get_expression_from_deque();
-
-            if (p) {
-                p = q.lead();
-            }
-            else {
-                p = q.next().lead();
-            }
-
-            set_expression_on_code(p);
-        }   break;
-
-
-
-        case op_code::if_op: {
-            /*
-                This is the basic prefix p -> q else -q.
-
-                It simply rearanges the expressions ahead
-                of the operator into a postfix implimentation
-                of the implications.
-
-                example:
-                    var x = '42'
-
-                    if (x > '10'):
-                        "x is greater than 10" << endl
-                    ;
-                    elif (x < '10'):
-                        "x is less than 10" << endl
-                    ;
-                    else:
-                        "x is equal to 10" << endl
-                    ;
-            */
-
-            var oper;
-            var code = expression();
-
-            do {  // Loop through the conditions and consequents.
-                  // Generate an expression list of each implication.
-
-                var p = get_expression_from_code();
+                var p = get_expression_from_deque();
                 var q = get_expression_from_code();
 
-                if (oper.op_call() == op_code::else_op) {
-                    set_expression_on_code(q);
-                    q = p;
-                    p = boolean(true);
+                if (p) {
+                    p = q.lead();
+                }
+                else {
+                    p = q.drop().lead();
                 }
 
-                code = code.push(q);
-                code = code.push(p);
+                set_expression_on_code(p);
+            }   break;
 
-                oper = get_expression_from_code();
-
-                if (!(oper.op_call() == op_code::elif_op || oper.op_call() == op_code::else_op)) {
-                    set_expression_on_code(oper);
-                }
-
-            } while (oper.op_call() == op_code::elif_op || oper.op_call() == op_code::else_op);
-
-            // Now loop through the implication list.
-            // Generating the required, postfix implication.  
-
-            var elif_statement = expression();
-
-            while (code) {
-
-                var p = code.lead();
-                var q = code.lead();
-
-                var e = expression();
-
-                e = e.push(op_call(op_code::l_imp_op));
-                e = e.push(make_pair(q, elif_statement));
-                e = e.push(op_call(op_code::idnt_op));
-                e = e.push(p);
-
-                elif_statement = e;
-            }
-
-            // fmt::println("statement = {}", elif_statement);
-
-            set_expression_on_code(elif_statement);
-        } break;
-
-
-
-        case op_code::def_op: {  // Presuppose the definition of a function.  
-
-            var name = get_expression_from_code();
-            var args = get_expression_from_code();
-            var body = get_expression_from_code();
-
-            function lam(args, body);
-
-            if (_variables.size() > 1) {
+            case op_code::l_imp_op: {
                 /*
-                    Define the function's internal closure.
+                    This is the basic postfix p -> q else -q.
 
-                    Ignore global scope for the purpose of setting the values of
-                    the enclosure.  Get the current scope and bind it to the defined
-                    function.
+                    example:
+                        var x = '42'
+
+                        (x > '10')+:
+                            ("x is greater than 10" << endl)
+                            ("x is not greater than 10" << endl)
+                        ; imply
                 */
-                lam.bind_scope(_variables.back());
-            }
 
-            lam.bind_variable(name, lam);           // Provide a self reference for recursion.  
-            lam.bind_variable(text("self"), name);  // Identify the self reference.  
+                var q = get_expression_from_deque();
+                var p = get_expression_from_deque();
 
-            set_expression_on_deque(name);
-            set_expression_on_deque(lam);
-            set_expression_on_code(op_call(op_code::assign_op));
+                if (bool(p)) {
+                    p = q.lead();
+                }
+                else {
+                    p = q.drop().lead();
+                }
 
-        }	break;
+                set_expression_on_code(p);
+            }   break;
 
-        case op_code::end_scope_op: {   // Delete the current enclosure scope.
-            delete_enclosure();
-        }	break;
+            case op_code::if_op: {
+                /*
+                    This is the basic prefix p -> q else -q.
 
-        case op_code::shebang_op: {    // Process a shebang assignment.
+                    It simply rearranges the expressions ahead
+                    of the operator into a postfix implementation
+                    of the implications.
 
-            var tag = get_expression_from_code();
-            var val = get_expression_from_code();
-            var eql = get_expression_from_code();
+                    example:
+                        var x = '42'
 
-            if (eql.op_call() == op_code::eq_op) {
+                        if (x > '10'):
+                            "x is greater than 10" << endl
+                        ;
+                        elif (x < '10'):
+                            "x is less than 10" << endl
+                        ;
+                        else:
+                            "x is equal to 10" << endl
+                        ;
+                */
 
-                switch (tag.op_call()) {
+                var oper;
+                var code = expression();
 
-                    case op_code::no_except_op: 
+                do {  // Loop through the conditions and consequents.
+                      // Generate an expression list of each implication.
+
+                    var p = get_expression_from_code();
+                    var q = get_expression_from_code();
+
+                    if (oper.op_call() == op_code::else_op) {
+                        set_expression_on_code(q);
+                        q = p;
+                        p = boolean(true);
+                    }
+
+                    code = code.push(q);
+                    code = code.push(p);
+
+                    oper = get_expression_from_code();
+
+                    if (!(oper.op_call() == op_code::elif_op || oper.op_call() == op_code::else_op)) {
+                        set_expression_on_code(oper);
+                    }
+
+                } while (oper.op_call() == op_code::elif_op || oper.op_call() == op_code::else_op);
+
+                // Now loop through the implication list.
+                // Generating the required, postfix implication.  
+
+                var elif_statement = expression();
+
+                while (code) {
+
+                    var p = code.lead();
+                    var q = code.lead();
+
+                    var e = expression();
+
+                    e = e.push(op_call(op_code::l_imp_op));
+                    e = e.push(make_pair(q, elif_statement));
+                    e = e.push(op_call(op_code::idnt_op));
+                    e = e.push(p);
+
+                    elif_statement = e;
+                }
+
+                // fmt::println("statement = {}", elif_statement);
+
+                set_expression_on_code(elif_statement);
+            } break;
+
+            case op_code::def_op: {  // Presuppose the definition of a function.  
+
+                var name = get_expression_from_code();
+                var args = get_expression_from_code();
+                var body = get_expression_from_code();
+
+                function lam(args, body);
+
+                if (_variables.size() > 1) {
+                    /*
+                        Define the function's internal closure.
+
+                        Ignore global scope for the purpose of setting the values of
+                        the enclosure.  Get the current scope and bind it to the defined
+                        function.
+                    */
+                    lam.bind_scope(_variables.back());
+                }
+
+                lam.bind_variable(name, lam);           // Provide a self reference for recursion.  
+                lam.bind_variable(text("self"), name);  // Identify the self reference.  
+
+                set_expression_on_deque(name);
+                set_expression_on_deque(lam);
+                set_expression_on_code(op_call(op_code::assign_op));
+
+            }   break;
+
+            case op_code::end_scope_op: {   // Delete the current enclosure scope.
+                delete_enclosure();
+            }   break;
+
+            case op_code::shebang_op: {    // Process a shebang assignment.
+
+                var tag = get_expression_from_code();
+                var val = get_expression_from_code();
+                var eql = get_expression_from_code();
+
+                if (eql.op_call() == op_code::eq_op) {
+
+                    switch (tag.op_call()) {
+
+                    case op_code::no_except_op:
                         NO_EXCEPTIONS = val.type() == "boolean" && val ? true : false;
                         break;
+                    }
                 }
-            }
-        }
+            }   break;
         }
     }
 }
 
 /********************************************************************************************/
 //
-//                                  Sequence Operators
+//                                    Sequence Operators
 //
 /********************************************************************************************/
 namespace Oliver {
@@ -805,8 +801,18 @@ namespace Oliver {
 
                 var x = get_expression_from_deque();
 
-                x = x.next();
+                x = x.drop();
                 set_expression_on_deque(x);
+
+            }   break;
+
+
+            case op_code::next_op: {
+
+                var x = get_expression_from_deque();
+
+                x = x.drop();
+                set_expression_on_code(x);
 
             }   break;
 
@@ -884,7 +890,50 @@ namespace Oliver {
 
 /********************************************************************************************/
 //
-//                                   Binary Operators
+//                                     Index Operators
+//
+/********************************************************************************************/
+namespace Oliver {
+
+    inline void evaluator::index_operators(const op_code& opr) {
+
+        switch (opr) {
+
+            case op_code::get_op: {
+                var k = get_expression_from_deque();
+                var m = get_expression_from_deque();
+                m = m.get(k);
+                set_expression_on_deque(m);
+            }   break;
+
+            case op_code::set_op: {
+                var v = get_expression_from_deque();
+                var k = get_expression_from_deque();
+                var m = get_expression_from_deque();
+;               m = m.set(k, v);
+                set_expression_on_deque(m);
+            }   break;
+
+            case op_code::has_op: {
+                var k = get_expression_from_deque();
+                var m = get_expression_from_deque();
+                m = m.has(k);
+                set_expression_on_deque(m);
+            }   break;
+
+            case op_code::del_op: {
+                var k = get_expression_from_deque();
+                var m = get_expression_from_deque();
+                m = m.del(k);
+                set_expression_on_deque(m);
+            }   break;
+        }
+    }
+}
+
+/********************************************************************************************/
+//
+//                                      Binary Operators
 //
 /********************************************************************************************/
 namespace Oliver {
@@ -896,84 +945,97 @@ namespace Oliver {
 
         switch (opr) {
 
-        case op_code::l_and_op:
-            x = boolean(x && y);
-            break;
+            case op_code::l_and_op:
+                x = boolean(x && y);
+                break;
 
-        case op_code::l_or_op:
-            x = boolean(x || y);
-            break;
+            case op_code::l_or_op:
+                x = boolean(x || y);
+                break;
 
-        case op_code::l_xor_op: 
-            x = boolean(bool(x) != bool(y));
-            break;
+            case op_code::l_xor_op:
+                x = boolean(bool(x) != bool(y));
+                break;
 
 
-        case op_code::eq_op:
-            x = boolean(x == y);
-            break;
+            case op_code::eq_op:
+                x = boolean(x == y);
+                break;
 
-        case op_code::ne_op:
-            x = boolean(x != y);
-            break;
+            case op_code::ne_op:
+                x = boolean(x != y);
+                break;
 
-        case op_code::gt_op:
-            x = boolean(x > y);
-            break;
+            case op_code::gt_op:
+                x = boolean(x > y);
+                break;
 
-        case op_code::ge_op:
-            x = boolean(x >= y);
-            break;
+            case op_code::ge_op:
+                x = boolean(x >= y);
+                break;
 
-        case op_code::lt_op:
-            x = boolean(x < y);
-            break;
+            case op_code::lt_op:
+                x = boolean(x < y);
+                break;
 
-        case op_code::le_op:
-            x = boolean(x <= y);
-            break;
+            case op_code::le_op:
+                x = boolean(x <= y);
+                break;
 
-        case op_code::add_op:
-            x = x + y;
-            break;
+            case op_code::add_op:
+                x = x + y;
+                break;
 
-        case op_code::sub_op:
-            x = x - y;
-            break;
+            case op_code::sub_op:
+                x = x - y;
+                break;
 
-        case op_code::mul_op:
-            x = x * y;
-            break;
+            case op_code::mul_op:
+                x = x * y;
+                break;
 
-        case op_code::div_op:
-            x = x / y;
-            break;
+            case op_code::div_op:
+                x = x / y;
+                break;
 
-        case op_code::mod_op:
-            x = x % y;
-            break;
+            case op_code::mod_op:
+                x = x % y;
+                break;
 
-            //case op_code::fdiv_op:  TODO: Should be defined here instead of in var class
-            //    x = x.f_div(y);
-            //    break;
+                //case op_code::fdiv_op:  TODO: Should be defined here instead of in var class
+                //    x = x.f_div(y);
+                //    break;
 
-            //case op_code::rem_op:
-            //    x = x.rem(y);
-            //    break;
+                //case op_code::rem_op:
+                //    x = x.rem(y);
+                //    break;
 
-        case op_code::exp_op:
-            x = x.pow(y);
-            break;
-
-        default:
-            break;
+            case op_code::exp_op:
+                x = x.pow(y);
+                break;
         }
 
         set_expression_on_deque(x);
     }
+}
 
-    inline bool evaluator::expression_is_empty(const var& expr) const {
-        return !expr;
+/********************************************************************************************/
+//
+//                                    Algorithm Operators
+//
+/********************************************************************************************/
+namespace Oliver {
+
+    inline void evaluator::algorithm_operators(const op_code& opr) {
+
+        var x = get_expression_from_deque();
+
+        switch (opr) {
+            case op_code::rev_op:
+                x = x.reverse();
+                break;
+        }
+
+        set_expression_on_deque(x);
     }
-
 }

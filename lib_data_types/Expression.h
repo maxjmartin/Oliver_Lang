@@ -59,7 +59,8 @@ namespace Oliver {
 
         friend var                  _lead_(expression& self);
         friend var                  _push_(expression& self, var& other);
-        friend var                  _next_(expression& self);
+        friend var                  _drop_(expression& self);
+        friend var                 _shift_(expression& self);
         friend var               _reverse_(expression& self);
 
         friend var                   _add_(expression& self, var& other);
@@ -146,13 +147,22 @@ namespace Oliver {
         return value_of(self);
     }
 
-    var _next_(expression& self) {
+    var _drop_(expression& self) {
 
         if (!self._expr.empty()) {
             self._expr.pop_back();
         }
 
         return value_of(self);
+    }
+
+    var _shift_(expression& self) {
+
+        var a = _lead_(self);
+
+        a = make_pair(a, self);
+
+        return a;
     }
 
     var _reverse_(expression& self) {

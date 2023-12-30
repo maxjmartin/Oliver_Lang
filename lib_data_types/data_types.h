@@ -35,6 +35,7 @@
 #include "Error.h"
 #include "Function.h"
 #include "List.h"
+#include "Object.h"
 
 
 namespace Oliver {

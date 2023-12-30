@@ -105,6 +105,6 @@ namespace Oliver {
             
         std::string pop_code();
 
-        static const std::vector<std::string> EnclosureChars;
+        static const std::vector<std::string> SeperateOnChar;
     };
 }
