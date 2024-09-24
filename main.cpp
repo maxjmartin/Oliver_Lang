@@ -31,18 +31,6 @@ int main(int argc, char* argv[]) {
     using namespace fmt;
     using namespace Oliver;
 
-    println("{}", to_lower_case("Hello!"s));
-    println("{}", to_upper_case("Hello!"s));
-
-    println("{}", left_trim_ws("    \t Hello!"s));
-    println("{}", right_trim_ws("Hello!     \t"s));
-    println("{}", trim_ws("    \t Hello!     \t"s));
-
-    auto test_str = "1 2 3 4 5 6 7 8 9 0"s;
-    auto v = split(test_str);
-    println("{}", test_str);
-    println("{}", v);
-
     var a{ nullptr };
     var b{ number(8) };
     println("Prior to sub scope:");
@@ -64,7 +52,7 @@ int main(int argc, char* argv[]) {
     println("\ta = {}",   a);
     println("\tb = {}", *b.cast<int>());
 
-    println("\tb.get(a) = {}\n", b.get(a * a));  // Equivilent to operator[].
+    println("\tb.get(a * a) = {}\n", b.get(a * a));  // Equivalent to operator[].
 
     return 0;
 }
