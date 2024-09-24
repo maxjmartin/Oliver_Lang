@@ -1,3 +1,4 @@
 // the configured options and settings for Oliver
 #define Oliver_VERSION_MAJOR @Oliver_VERSION_MAJOR@
 #define Oliver_VERSION_MINOR @Oliver_VERSION_MINOR@
+#define Oliver_VERSION_PATCH @Oliver_VERSION_PATCH@

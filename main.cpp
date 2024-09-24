@@ -17,47 +17,54 @@
 //          GNU Affero General Public License for more details.
 //    
 //          You should have received a copy of the GNU Affero General Public License
-//          along with this program.If not, see < https://www.gnu.org/licenses/>.
+//          along with this program.If not, see <https://www.gnu.org/licenses/>.
 //    
 //          The author can be reached at: maxjmartin@gmail.com
 //
 /********************************************************************************************/
 
-#include <iostream>
-#include <string>
-
-#include "compiler.h"
-#include "evaluater.h"
-#include "OliverConfig.h"
+#include "oliver_lang.h"
 
 int main(int argc, char* argv[]) {
 
+    using namespace std;
+    using namespace fmt;
     using namespace Oliver;
 
-    try {
-        if (argc == 1) {
-            return 0;
-        }
+    println("{}", to_lower_case("Hello!"s));
+    println("{}", to_upper_case("Hello!"s));
 
-        if (argc == 2) {
+    println("{}", left_trim_ws("    \t Hello!"s));
+    println("{}", right_trim_ws("Hello!     \t"s));
+    println("{}", trim_ws("    \t Hello!     \t"s));
 
-            var code;
-            {
-                code = compiler{ TextParser{ argv[1] }.parse() }.compile();
-            }
+    auto test_str = "1 2 3 4 5 6 7 8 9 0"s;
+    auto v = split(test_str);
+    println("{}", test_str);
+    println("{}", v);
 
-            //fmt::println("code = {}", code);
-            //fmt::println("");
-
-            {
-                code = evaluator{}.eval(code);
-            }
-
-            // fmt::println("code = {}", code);
-        }
+    var a{ nullptr };
+    var b{ number(8) };
+    println("Prior to sub scope:");
+    println("\ta = {}",   a);
+    println("\tb = {}\n", b);
+    {
+        auto x = new int(42);
+        a = number("4");
+        var c(x);
+        b = move(c);
+        delete x;
+        println("Prior to sub scope:");
+        println("\ta = {}",   a);
+        println("\tb = {}",   b);
+        println("\tc = {}\n", c);
     }
-    catch (std::exception& e) {
-        fmt::println("Error during runtime: {}", e.what());
-    }
+    a = text("I'm a text string.");
+    println("After the sub scope:");
+    println("\ta = {}",   a);
+    println("\tb = {}", *b.cast<int>());
+
+    println("\tb.get(a) = {}\n", b.get(a * a));  // Equivilent to operator[].
+
     return 0;
 }

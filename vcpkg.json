@@ -1,0 +1,12 @@
+{
+  "dependencies": [
+    {
+      "name": "boost",
+      "version>=": "1.85.0"
+    },
+    {
+      "name": "fmt",
+      "version>=": "11.0.2"
+    }
+  ]
+}
