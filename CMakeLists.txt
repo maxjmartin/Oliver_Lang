@@ -40,7 +40,7 @@ set(WARNINGS_AS_ERRORS ON)           # Treat warnings as errors.
 set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
 set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
 target_compile_options(oliver_compiler_flags INTERFACE
-  "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Wall;-Wextra;-Wshadow;-Wformat=2;-Wunused>>"
+  "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Wall;-Wextra;-Wshadow;-Wformat=2;-Wunused;>>"
   "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>"
 )
 
@@ -52,25 +52,25 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 
-if(APPLE)
-  set(CMAKE_INSTALL_RPATH "@executable_path/../lib")
-elseif(UNIX)
-  set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
-endif()
+# if(APPLE)
+#   set(CMAKE_INSTALL_RPATH "@executable_path/../lib")
+# elseif(UNIX)
+#   set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
+# endif()
 
 # Configure a header file to pass the version number only.
 configure_file(OliverConfig.h.in OliverConfig.h)
 
 # Add the project app directory.
-add_subdirectory(lib_oliver_lang)
+add_subdirectory(app)
 
 # Add the executable.
 add_executable(Oliver main.cpp)
 set_target_properties(Oliver PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
 
 target_link_libraries(Oliver PRIVATE
-                      oliver_lang
-                      oliver_compiler_flags
+                        App
+                        oliver_compiler_flags
                      )
 
 # Add the binary tree to the search path for include files
